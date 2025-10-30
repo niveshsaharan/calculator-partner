@@ -12,6 +12,7 @@ $uploadError = '';
 $uploadSuccess = '';
 $transactions = [];
 $summary = [];
+$lastTransaction = [];
 $fileInfo = [];
 $previousBalances = [
         'NB' => 0,
@@ -56,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result['success']) {
                 $transactions = $result['transactions'];
                 $summary = $result['summary'];
+                $lastTransaction = $result['last_transaction'];
                 $fileInfo = [
                         'name' => $fileName,
                         'size' => formatBytes($fileSize),
@@ -76,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  */
 function processCSV($filePath, $previousBalances) {
     $transactions = [];
+    $lastTransaction = null;
     $summary = [
             'NB' => ['deposits' => 0, 'withdrawals' => 0, 'net' => 0, 'count' => 0],
             'NS' => ['deposits' => 0, 'withdrawals' => 0, 'net' => 0, 'count' => 0],
@@ -122,7 +125,7 @@ function processCSV($filePath, $previousBalances) {
     }
 
     // Validate required columns
-    $requiredColumns = ['remarks', 'withdrawal', 'deposit', 'who'];
+    $requiredColumns = ['remarks', 'withdrawal', 'deposit', 'who', 'balance'];
     foreach ($requiredColumns as $col) {
         if (!isset($headerMap[$col])) {
             fclose($handle);
@@ -175,6 +178,17 @@ function processCSV($filePath, $previousBalances) {
                 'who' => $who
         ];
 
+        if(! $lastTransaction || ($lastTransaction && $date && strtotime($date) >= strtotime($lastTransaction['date']))) {
+            $lastTransaction = [
+                    'date' => $date,
+                    'remarks' => $remarks,
+                    'withdrawal' => $withdrawal,
+                    'deposit' => $deposit,
+                    'balance' => $balance,
+                    'who' => $who
+            ];
+        }
+
         // Update summary
         $summary[$who]['deposits'] += $deposit;
         $summary[$who]['withdrawals'] += $withdrawal;
@@ -198,7 +212,8 @@ function processCSV($filePath, $previousBalances) {
     return [
             'success' => true,
             'transactions' => $transactions,
-            'summary' => $summary
+            'summary' => $summary,
+            'last_transaction' => $lastTransaction,
     ];
 }
 
@@ -789,12 +804,10 @@ function formatCurrency($amount) {
                     </div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Grand Net Total</div>
+                    <div class="stat-label">Latest Balance</div>
                     <div class="stat-value">
                         <?php
-                        $grandNet = $summary['NB']['net'] + $summary['NS']['net'] +
-                                $summary['C']['net'] + $summary['Unspecified']['net'];
-                        echo formatCurrency($grandNet);
+                        echo isset($lastTransaction['balance']) ? formatCurrency($lastTransaction['balance']) : '-';
                         ?>
                     </div>
                 </div>
