@@ -189,10 +189,23 @@ function processCSV($filePath, $previousBalances) {
             ];
         }
 
-        // Update summary
-        $summary[$who]['deposits'] += $deposit;
-        $summary[$who]['withdrawals'] += $withdrawal;
-        $summary[$who]['count']++;
+        if ($who === 'C') {
+            // Split common transactions 50-50 between partners
+            $summary['NB']['deposits'] += ($deposit / 2);
+            $summary['NB']['withdrawals'] += ($withdrawal / 2);
+            $summary['NS']['deposits'] += ($deposit / 2);
+            $summary['NS']['withdrawals'] += ($withdrawal / 2);
+
+            // Still track in common for display purposes
+//            $summary[$who]['deposits'] += $deposit;
+//            $summary[$who]['withdrawals'] += $withdrawal;
+            $summary[$who]['count']++;
+        } else {
+            // Regular transaction
+            $summary[$who]['deposits'] += $deposit;
+            $summary[$who]['withdrawals'] += $withdrawal;
+            $summary[$who]['count']++;
+        }
     }
 
     fclose($handle);
@@ -887,7 +900,7 @@ function formatCurrency($amount) {
             <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 30px; border-radius: 12px; margin-bottom: 20px;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
                     <div style="text-align: center;">
-                        <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">NB Net Balance</div>
+                        <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">NB Net</div>
                         <div style="font-size: 1.8em; font-weight: bold; color: <?php echo $nbNetOriginal >= 0 ? '#27ae60' : '#e74c3c'; ?>;">
                             <?php echo formatCurrency($nbNetOriginal); ?>
                         </div>
@@ -897,7 +910,7 @@ function formatCurrency($amount) {
                     </div>
 
                     <div style="text-align: center;">
-                        <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">NS Net Balance</div>
+                        <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">NS Net</div>
                         <div style="font-size: 1.8em; font-weight: bold; color: <?php echo $nsNetOriginal >= 0 ? '#27ae60' : '#e74c3c'; ?>;">
                             <?php echo formatCurrency($nsNetOriginal); ?>
                         </div>
@@ -906,13 +919,13 @@ function formatCurrency($amount) {
                         </div>
                     </div>
 
-                    <div style="text-align: center;">
+                    <div style="text-align: center; display:none;">
                         <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">Common Balance</div>
                         <div style="font-size: 1.8em; font-weight: bold; color: #666;">
                             <?php echo formatCurrency($commonNet); ?>
                         </div>
                         <div style="font-size: 0.85em; color: #888; margin-top: 5px;">
-                            (Excluded from settlement)
+                            (Split 50-50 between partners)
                         </div>
                     </div>
                 </div>
@@ -1008,7 +1021,7 @@ function formatCurrency($amount) {
                 <strong>📝 Calculation Method:</strong>
                 <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
                     <li>Each partner's net = (Withdrawals - Deposits + Previous Balance)</li>
-                    <li>Common expenses/income are excluded from settlement (already split 50-50)</li>
+                    <li>Common expenses/income are split 50-50 between NB and NS</li>
                     <li>Settlement amount = |NB Net - NS Net| ÷ 2</li>
                     <li>The partner with higher net balance receives the settlement amount</li>
                 </ul>
@@ -1084,7 +1097,7 @@ function formatCurrency($amount) {
                 </div>
 
                 <!-- Common Summary -->
-                <div class="summary-card common">
+                <div class="summary-card common" style="display:none;">
                     <h3>🤝 Common Expenses</h3>
 
                     <div class="summary-item">
